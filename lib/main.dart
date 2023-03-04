@@ -1,71 +1,66 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-void main() => runApp(webapp());
+void main() {
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const MyWebView(),
+    ),
+  );
+}
 
-class webapp extends StatelessWidget {
-  late WebViewController _controller;
+class MyWebView extends StatefulWidget {
+  const MyWebView({super.key});
+
+  @override
+  _MyWebViewState createState() => _MyWebViewState();
+}
+
+class _MyWebViewState extends State<MyWebView> {
+  final Completer<WebViewController> _controller =
+      Completer<WebViewController>();
+  bool _isLoading = true;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _reload,
+          ),
+        ],
       ),
-      home: Scaffold(
-        appBar: AppBar(
-            // centerTitle: true,
-            // title: Text("Veer Fitness"),
-            // actions: [
-            //   IconButton(
-            //     icon: Icon(Icons.arrow_back),
-            //     onPressed: () async {
-            //       if (await _controller.canGoBack()) {
-            //         _controller.goBack();
-            //       }
-            //     },
-            //   ),
-            // ],
-            ),
-        body: WillPopScope(
-          onWillPop: () async {
-            if (await _controller.canGoBack()) {
-              _controller.goBack();
-              return false;
-            } else {
-              showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                        title: const Text('Do you want to exit'),
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text('No'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              SystemNavigator.pop();
-                            },
-                            child: const Text('Yes'),
-                          ),
-                        ],
-                      ));
-              return true;
-            } //else
-          },
-          child: WebView(
+      body: Stack(
+        children: [
+          WebView(
             initialUrl: 'http://14.139.123.181:8080/EnergyMeter/usage',
             javascriptMode: JavascriptMode.unrestricted,
             onWebViewCreated: (WebViewController webViewController) {
-              _controller = webViewController;
+              _controller.complete(webViewController);
+            },
+            onPageFinished: (String url) {
+              setState(() {
+                _isLoading = false;
+              });
             },
           ),
-        ),
+          _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : SizedBox.shrink(),
+        ],
       ),
     );
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _isLoading = true;
+    });
+    final controller = await _controller.future;
+    await controller.reload();
   }
 }
