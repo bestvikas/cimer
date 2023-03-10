@@ -1,66 +1,60 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
-  runApp(
-    MaterialApp(
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'CIMER Automation',
       debugShowCheckedModeBanner: false,
-      home: const MyWebView(),
-    ),
-  );
+      home: MyWebView(url: 'http://14.139.123.181:8080/EnergyMeter/usage'),
+    );
+  }
 }
 
 class MyWebView extends StatefulWidget {
-  const MyWebView({super.key});
+  final String url;
+
+  MyWebView({required this.url});
 
   @override
   _MyWebViewState createState() => _MyWebViewState();
 }
 
 class _MyWebViewState extends State<MyWebView> {
-  final Completer<WebViewController> _controller =
-      Completer<WebViewController>();
-  bool _isLoading = true;
+  late WebViewController _controller;
+
+  void _refreshWebView() {
+    _controller.reload();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // title: Text(widget.url),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: _reload,
+            onPressed: _refreshWebView,
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          WebView(
-            initialUrl: 'http://14.139.123.181:8080/EnergyMeter/usage',
-            javascriptMode: JavascriptMode.unrestricted,
-            onWebViewCreated: (WebViewController webViewController) {
-              _controller.complete(webViewController);
-            },
-            onPageFinished: (String url) {
-              setState(() {
-                _isLoading = false;
-              });
-            },
-          ),
-          _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : SizedBox.shrink(),
-        ],
+      body: WebView(
+        initialUrl: widget.url,
+        javascriptMode: JavascriptMode.unrestricted,
+        onWebViewCreated: (WebViewController controller) {
+          _controller = controller;
+          // _controller.complete(controller);
+          controller.clearCache();
+          final cookieManager = CookieManager();
+          cookieManager.clearCookies();
+        },
       ),
     );
-  }
-
-  Future<void> _reload() async {
-    setState(() {
-      _isLoading = true;
-    });
-    final controller = await _controller.future;
-    await controller.reload();
   }
 }
