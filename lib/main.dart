@@ -28,8 +28,16 @@ class MyWebView extends StatefulWidget {
 class _MyWebViewState extends State<MyWebView> {
   late WebViewController _controller;
 
-  void _refreshWebView() {
-    _controller.reload();
+  Future<void> _refreshWebView() async {
+    final bool canGoBack = await _controller.canGoBack();
+    if (canGoBack) {
+      await _controller.goBack();
+    } else {
+      await _controller.reload();
+      _controller.clearCache();
+      final cookieManager = CookieManager();
+      cookieManager.clearCookies();
+    }
   }
 
   @override
@@ -49,11 +57,22 @@ class _MyWebViewState extends State<MyWebView> {
         javascriptMode: JavascriptMode.unrestricted,
         onWebViewCreated: (WebViewController controller) {
           _controller = controller;
-          // _controller.complete(controller);
-          controller.clearCache();
-          final cookieManager = CookieManager();
-          cookieManager.clearCookies();
         },
+        navigationDelegate: (NavigationRequest request) {
+          if (request.url.startsWith('https://www.youtube.com/')) {
+            print('blocking navigation to $request}');
+            return NavigationDecision.prevent;
+          }
+          print('allowing navigation to $request');
+          return NavigationDecision.navigate;
+        },
+        onPageStarted: (String url) {
+          print('Page started loading: $url');
+        },
+        onPageFinished: (String url) {
+          print('Page finished loading: $url');
+        },
+        gestureNavigationEnabled: true,
       ),
     );
   }
